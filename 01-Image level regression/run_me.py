@@ -14,7 +14,7 @@ from keras.models import Sequential, load_model
 from keras.layers import Conv2D, MaxPooling2D, GlobalAveragePooling2D
 # from keras.layers import UpSampling2D
 # from keras.layers import Input, concatenate
-# from keras.models import Model
+from keras.models import Model
 # from keras import backend as K
 from keras.layers import Activation
 # from keras.layers import BatchNormalization
@@ -51,7 +51,7 @@ def load_data(dir_path):
         if i not in ignore_list:
             image_path = os.path.join(dir_path, str(i)+'.png')
             print image_path
-            img = cv2.imread(image_path, 0)
+            img = cv2.imread(image_path)
             print 'img.shape', img.shape
             image_list.append(img)
 
@@ -118,14 +118,10 @@ def train():
     model = get_model()
 
     x_train, y_train = load_data('kaggle_data/train_images_512x512')
-
-    datagen = ImageDataGenerator(
-        horizontal_flip=True,
-        vertical_flip=True)
+    datagen = ImageDataGenerator(horizontal_flip=True, vertical_flip=True)
 
     model.fit_generator(datagen.flow(x_train, y_train, batch_size=BATCH_SIZE),
-                        steps_per_epoch=len(x_train) / BATCH_SIZE,
-                        epochs=EPOCHS)
+                     steps_per_epoch=len(x_train) / BATCH_SIZE, epochs=EPOCHS)
 
     model.save(MODEL_NAME+'_model.h5')
 
