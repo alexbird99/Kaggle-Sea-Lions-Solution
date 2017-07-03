@@ -19,12 +19,16 @@ from keras.models import Model
 from keras.layers import Activation
 # from keras.layers import BatchNormalization
 from keras.preprocessing.image import ImageDataGenerator
+from keras.layers.core import Flatten, Dense, Dropout
+from keras.layers.convolutional import Convolution2D, ZeroPadding2D
+from keras.optimizers import SGD
+
 
 N_CLASSES = 5
 BATCH_SIZE = 16
 EPOCHS = 100
 IMAGE_SIZE = 512
-MODEL_NAME = 'cnn_regression'
+MODEL_NAME = 'vgg_16_pre_trained'
 
 
 def read_ignore_list():
@@ -110,18 +114,100 @@ def get_model():
 
     return model
 
+def get_model_vgg_16():
+    """
+    vgg_16
+    """
+    input_shape = (IMAGE_SIZE, IMAGE_SIZE, 3)
+    model = Sequential()
+
+    model.add(ZeroPadding2D((1, 1), input_shape=input_shape))
+    model.add(Convolution2D(64, 3, 3, activation='relu'))
+    model.add(ZeroPadding2D((1, 1)))
+    model.add(Convolution2D(64, 3, 3, activation='relu'))
+    model.add(MaxPooling2D((2, 2), strides=(2, 2)))
+
+    model.add(ZeroPadding2D((1, 1)))
+    model.add(Convolution2D(128, 3, 3, activation='relu'))
+    model.add(ZeroPadding2D((1, 1)))
+    model.add(Convolution2D(128, 3, 3, activation='relu'))
+    model.add(MaxPooling2D((2, 2), strides=(2, 2)))
+
+    model.add(ZeroPadding2D((1, 1)))
+    model.add(Convolution2D(256, 3, 3, activation='relu'))
+    model.add(ZeroPadding2D((1, 1)))
+    model.add(Convolution2D(256, 3, 3, activation='relu'))
+    model.add(ZeroPadding2D((1, 1)))
+    model.add(Convolution2D(256, 3, 3, activation='relu'))
+    model.add(MaxPooling2D((2, 2), strides=(2, 2)))
+
+    model.add(ZeroPadding2D((1, 1)))
+    model.add(Convolution2D(512, 3, 3, activation='relu'))
+    model.add(ZeroPadding2D((1, 1)))
+    model.add(Convolution2D(512, 3, 3, activation='relu'))
+    model.add(ZeroPadding2D((1, 1)))
+    model.add(Convolution2D(512, 3, 3, activation='relu'))
+    model.add(MaxPooling2D((2, 2), strides=(2, 2)))
+
+    model.add(ZeroPadding2D((1, 1)))
+    model.add(Convolution2D(512, 3, 3, activation='relu'))
+    model.add(ZeroPadding2D((1, 1)))
+    model.add(Convolution2D(512, 3, 3, activation='relu'))
+    model.add(ZeroPadding2D((1, 1)))
+    model.add(Convolution2D(512, 3, 3, activation='relu'))
+    model.add(MaxPooling2D((2, 2), strides=(2, 2)))
+
+    model.add(Flatten())
+    model.add(Dense(4096, activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(4096, activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(N_CLASSES, activation='softmax'))
+
+    print model.summary
+
+    sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(optimizer=sgd, loss='categorical_crossentropy')
+
+    return model
+
+
+def get_model_vgg_16_pre_trained():
+    """
+    get_model_vgg_16_pre_trained
+    """
+    vgg16= keras.applications.vgg16.VGG16(include_top=False, weights='imagenet', input_shape=(IMAGE_SIZE, IMAGE_SIZE, 3))
+
+    x= Conv2D(N_CLASSES, (1, 1), activation='relu')(vgg16.output)
+    x= GlobalAveragePooling2D()(x)
+
+    model = Model(vgg16.input, x)
+
+    print model.summary()
+
+    model.compile(loss=keras.losses.mean_squared_error,
+            optimizer= keras.optimizers.Adadelta())
+
+    return model
+
+
 
 def train():
     """
     train
     """
-    model = get_model()
+    # model = get_model()
+    # model = get_model_vgg_16()
+    model = get_model_vgg_16_pre_trained()
 
     x_train, y_train = load_data('kaggle_data/train_images_512x512')
     datagen = ImageDataGenerator(horizontal_flip=True, vertical_flip=True)
 
-    model.fit_generator(datagen.flow(x_train, y_train, batch_size=BATCH_SIZE),
-                     steps_per_epoch=len(x_train) / BATCH_SIZE, epochs=EPOCHS)
+    model.fit_generator(
+        datagen.flow(x_train, y_train, batch_size=BATCH_SIZE),
+        steps_per_epoch=len(x_train) / BATCH_SIZE,
+        epochs=EPOCHS
+        )
 
     model.save(MODEL_NAME+'_model.h5')
 
